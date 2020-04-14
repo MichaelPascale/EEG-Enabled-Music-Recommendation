@@ -11,3 +11,6 @@ Final project for COMP.4600 Special Topics in Mobile Sensor Computing at the [Un
 
 **MUSE:**
 Successfully connected Muse with bluetooth to get stable muse values TP9,AF7,AF8,TP10. Saved these values into CSV.Currently pursuing classification of these values into different emotions. Also trying to evaluate different other features of these values to generate a better feature set for emotion detection.
+
+**LIBROSA:**
+Have used librosa in python to get the zero crossing rate; spectral centroid, which indicates where the mass of the sound is located; spectral roll-off, which is frequency below which a specified percentage of the total spectral energy; and calculated MFCCs of the audio signal. Have used PyAudio to get the audio files.
