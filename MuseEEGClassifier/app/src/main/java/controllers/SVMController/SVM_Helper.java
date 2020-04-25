@@ -56,6 +56,10 @@ public class SVM_Helper {
         medSm = new SmoothEEGResults();
     }
 
+    public SVM_Helper() {
+
+    }
+
     private void svmLoadModel(String filename) {
         try {
             AssetManager am = context.getAssets();

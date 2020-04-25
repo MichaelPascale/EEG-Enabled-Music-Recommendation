@@ -65,4 +65,6 @@
     <!--<string name="tv_meditation_citation"> Meditation Track: \nThe Honest Guys - Meditation - Relaxation </string>-->
 
     <string name="tv_legend"> Meditation:Blue, Alert:Red </string>
+
+    <string name="predicted"> null </string>
 </resources>
