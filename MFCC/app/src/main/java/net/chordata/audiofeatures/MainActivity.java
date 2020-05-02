@@ -16,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.media.AudioFormat;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
@@ -27,6 +28,8 @@ import android.view.View;
 import android.widget.TextView;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -45,6 +48,8 @@ import be.tarsos.dsp.AudioEvent;
 import be.tarsos.dsp.AudioProcessor;
 import be.tarsos.dsp.io.PipeDecoder;
 import be.tarsos.dsp.io.TarsosDSPAudioFormat;
+import be.tarsos.dsp.io.TarsosDSPAudioInputStream;
+import be.tarsos.dsp.io.UniversalAudioInputStream;
 import be.tarsos.dsp.io.android.AudioDispatcherFactory;
 import be.tarsos.dsp.mfcc.MFCC;
 
@@ -59,96 +64,70 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void openButton(View v) {
-        // Create an Android Storage Access Framework client.
-        Intent i = new Intent();
-        i.setAction(Intent.ACTION_OPEN_DOCUMENT);
+        try {
+            // Open the audio file.
+            InputStream audioFileStream = getResources().openRawResource(R.raw.voila);
+            ((TextView) findViewById(R.id.textView5)).setText("res/viola.mp3");
 
-        // Select the intent category.
-        i.addCategory(Intent.CATEGORY_OPENABLE);
+            // Import with JavaMP3
+            Sound sound = new Sound(new BufferedInputStream(audioFileStream));
 
-        // Set MIME type of file to look for.
-        i.setType("audio/*");
+            ByteArrayOutputStream outputStream  = new ByteArrayOutputStream();
 
-        // Start the dialogue.
-        startActivityForResult(i, 0);
-    }
+            int length = sound.decodeFullyInto(outputStream);
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == Activity.RESULT_OK) {
-            Uri uri = data.getData();
-            String path = uri.getPath();
-            ((TextView) findViewById(R.id.textView5)).setText(path);
-            Log.d("MFCC APP INFO", "Made it to line 82");
-            try {
-                // Open the audio file.
-                InputStream audioFileStream = getBaseContext().getContentResolver().openInputStream(uri);
-                Log.d("MFCC APP INFO", "Made it to line 86");
-                // Create an extractor to get file metadata.
-                //MediaExtractor extractor = new MediaExtractor();
-                //extractor.setDataSource(this, uri, null);
-                //extractor.selectTrack(0);
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
 
-                // Get the MIME type of the file.
-                //MediaFormat format = extractor.getTrackFormat(0);
+            String info = sound.getSamplingFrequency() + "hz, " + (sound.isStereo() ? 2 : 1) + " channels.";
+            ((TextView) findViewById(R.id.textView11)).setText(info);
 
-                // Initialize a codec object for the file type.
-                //MediaCodec codec = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME));
-                //codec.configure(format, null, null, 0);
-                //codec.start();
+            // From JavaMP3 getAudioFormat(). We can't use javax classes in Android...
+            TarsosDSPAudioFormat audioFormat =
+              new TarsosDSPAudioFormat(sound.getSamplingFrequency(), 16, sound.isStereo() ? 2 : 1, true, false);
 
-               // codec.getInputBuffer(0);
+            //AudioEvent audioEvent = new AudioEvent(audioFormat);
+            //byte[] bb = audioEvent.getByteBuffer();
+            //ArrayList<Byte> bytes = new ArrayList<Byte>();
 
-                //ByteBuffer fileBuffer = new ByteBuffer();
-                ///extractor.readSampleData(fileBuffer, 0);
 
-                // Queue onto codec
-                // Get from coded
-                //File f = new File(path);
-                //f.length();
-                //FileReader fr = new FileReader(f);
-                //fr.read();
-                Log.d("MFCC APP INFO", "Made it to line 111");
-                /* Begin JavaMP3 */
-                //Sound sound = new Sound(new BufferedInputStream(new FileInputStream(f)));
-                ContentResolver cr = getApplicationContext().getContentResolver();
-                Sound sound = new Sound(new BufferedInputStream(audioFileStream));
-                Log.d("SoundInfo", "SOUND INFO" + Integer.toString(sound.getSamplingFrequency()));
-                ((TextView) findViewById(R.id.textView11)).setText(Integer.toString(sound.getSamplingFrequency()));
-                /* ***** END JavaMP3 ***** */
-                //TarsosDSPAudioFormat audioFormat =
-                      //  new TarsosDSPAudioFormat(/*rate, ssize, channels, frameSize, frameRate, t/f bigendian*/);
-                //AudioEvent audioEvent = new AudioEvent(audioFormat);
-               // byte[] bb = audioEvent.getByteBuffer();
+            UniversalAudioInputStream stream = new UniversalAudioInputStream(inputStream, audioFormat);
 
-                // Run MFCC on buffered data.
-                //ArrayList<Byte> bytes = new ArrayList<Byte>();
-                ////while ( extractor.readSampleData());
-                ////Log.d("********", Integer.toString(extractor.g))
-                ////MFCC mfcc = new MFCC(/*sampleFrameSize, rate*/)
-                       // be.tarsos.dsp.io.PipeDecoder
+            // Reccomended buffer size from TarsosDSP docs.
+            AudioDispatcher d = new AudioDispatcher(stream, 1024, 512);
+            MFCC mfcc = new MFCC(1024, sound.getSamplingFrequency());
+            d.addAudioProcessor(mfcc);
 
-                //PipeDecoder decoder = new PipeDecoder();
-                //InputStream stream = decoder.getDecodedStream(uri.getPath(), 1, 1, -1);
+            ((TextView) findViewById(R.id.textView7)).setText("Processing...");
+            d.run();
 
-                //AudioDispatcher d = AudioDispatcherFactory.fromPipe()
-               // AudioProcessor p = new AudioProcessor() {
-                  //  @Override
-                  //  public boolean process(AudioEvent aev){
-                   //     return true;
-                  //  }
+            float result[] = mfcc.getMFCC();
+            float r = mean(result);
 
-                 //   @Override
-                 //   public void processingFinished() {
+            ((TextView) findViewById(R.id.textView7)).setText(Float.toString(r));
 
-                 //   }
-                //};*/
-            } catch (Exception e) {
-                Log.d("***ERROR!!!***", e.getMessage());
-                ((TextView) findViewById(R.id.textView9)).setText(e.getMessage());
-            }
+            //AudioDispatcher d = AudioDispatcherFactory.fromPipe()
+            // AudioProcessor p = new AudioProcessor() {
+            //  @Override
+            //  public boolean process(AudioEvent aev){
+            //     return true;
+            //  }
+
+            //   @Override
+            //   public void processingFinished() {
+
+            //   }
+            //};*/
+        } catch (Exception e) {
+            Log.d("***ERROR!!!***", e.getMessage());
+            ((TextView) findViewById(R.id.textView9)).setText(e.getMessage());
         }
+    }
+    public static float mean(float[] m) {
+        float total = 0;
+
+        for (int i = 0; i < m.length; i++)
+            total += m[i];
+        return total / m.length;
     }
 
 }
